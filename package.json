@@ -1,0 +1,23 @@
+{
+  "name": "pong",
+  "version": "1.0.0",
+  "description": "This is a Project for Communication II using a simple game implementing sockets",
+  "main": "server.js",
+  "scripts": {
+    "start" : "nodemon server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/juanfergiraldo"
+  },
+  "author": "Santiago Cadavid Bustamante & Juan Fernando Giraldo Cardona",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.15.3",
+    "node": "^8.2.1",
+    "socket.io": "^2.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.11.0"
+  }
+}
