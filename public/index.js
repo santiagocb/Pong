@@ -3,6 +3,14 @@ class VecPos {
     this.x = x
     this.y = y
   }
+  get len(){
+    return Math.sqrt(this.x * this.x + this.y * this.y)
+  }
+  set len(value) {
+      const f = value / this.len
+      this.x *= f
+      this.y *= f
+  }
 }
 
 class Rect {
@@ -37,10 +45,10 @@ class Ball {
       return this.pos.x + this.radio
   }
   get bottom(){
-      return this.pos.y - this.radio
+      return this.pos.y + this.radio
   }
   get top(){
-      return this.pos.y + this.radio
+      return this.pos.y - this.radio
   }
 }
 
@@ -49,6 +57,7 @@ class Player extends Rect{
     super(20, 100)
     this.speed = new VecPos
     this._lastPos = new VecPos
+    this.score = 0
   }
 }
 
@@ -56,15 +65,15 @@ class Pong {
   constructor(canvas) {
     var counter = 0
     var time = 20
-    const rad = 10
+    const rad = 5
     this._canvas = canvas
     this._context = canvas.getContext('2d')
 
     this.ball = new Ball(rad)
 
-    this.players = [new Player, new Player]
-    //Give different coord to each player
 
+    this.players = [new Player, new Player]
+    this.reset()
 
     let lasTime
 
@@ -77,56 +86,105 @@ class Pong {
       requestAnimationFrame(callback)
     }
     callback()
+
+    this.CHAR_PIXEL = 10  //Pixel's size
+    this.CHARS = [        //AWESOME METHOD
+      '111101101101111',
+      '010010010010010',
+      '111001111100111',
+      '111001111001111',
+      '101101111001001',
+      '111100111001111',
+      '111100111101111',
+      '111001001001001',
+      '111101111101111',
+      '111101111001111',
+    ].map(str => {
+      const canvas = document.createElement('canvas') //New HTML to create canvas to paint the score
+      canvas.height = this.CHAR_PIXEL * 5
+      canvas.width = this.CHAR_PIXEL * 3
+      const context = canvas.getContext('2d')
+      context.fillStyle = '#fff'
+      str.split('').forEach((fill, i) => {
+        if(fill == '1'){
+          context.fillRect((i % 3) * this.CHAR_PIXEL, (i / 3 | 0) * this.CHAR_PIXEL,
+          this.CHAR_PIXEL, this.CHAR_PIXEL)
+        }
+      })
+      return canvas
+    })
   }
   update(dt) {
     this.ball.pos.x += this.ball.speed.x * dt
     this.ball.pos.y += this.ball.speed.y * dt
 
-    this.frameControl()
-    this.drawBackground()
-    this.drawBall()
-    this.drawPlayers()
+    this.players[1].pos.y = this.ball.pos.y
+    this.draw()
     this.players.forEach(player => this.collide(player, this.ball))
+
+    if (this.ball.right > this._canvas.width || this.ball.left < 0) {
+      let playerId = this.ball.speed.x < 0 | 0
+      this.ball.speed.x = -this.ball.speed.x
+      this.players[playerId].score++
+      this.reset()
+    }
+
+    if (this.ball.bottom > this._canvas.height || this.ball.top < 0) {
+      this.ball.speed.y = -this.ball.speed.y
+    }
+  }
+  start(){
+    if(this.ball.speed.x == 0 && this.ball.speed.y == 0){
+      this.ball.speed.x = 300 * (Math.random() > .5 ? 1 : -1)
+      this.ball.speed.y = 300 * (Math.random() * 2 -1)
+      this.ball.speed.len = 200
+    }
   }
   reset(){
-    this.ball.pos.x = 100
-    this.ball.pos.y = 100
-    this.ball.speed.x = 100
-    this.ball.speed.y = 100
-    
+    this.ball.pos.x = this._canvas.width / 2
+    this.ball.pos.y = this._canvas.height / 2
+    this.ball.speed.x = 0
+    this.ball.speed.y = 0
+
+    //Give different coord to each player
     this.players[0].pos.x = 40
     this.players[1].pos.x = this._canvas.width - 40
     this.players.forEach(player => {
       player.pos.y = this._canvas.height / 2
     })
   }
-  frameControl(){
-    if (this.ball.right > this._canvas.width || this.ball.left < 0) {
-      let playerId = this.ball.speed.x < 0 | 0
-      //this.ball.speed.x = -this.ball.speed.x
-      this.players[playerId].score++
-      this.reset()
-    }
-
-    if (this.ball.top > this._canvas.height || this.ball.bottom < 0) {
-      this.ball.speed.y = -this.ball.speed.y
-    }
-  }
   collide(player, ball){
-    if(player.left < ball.right && player.right > ball.left &&
-      player.top < ball.bottom && player.bottom > ball.top){
+    if (player.left < ball.right && player.right > ball.left &&
+            player.top < ball.bottom && player.bottom > ball.top) {
+        const len = ball.speed.len
         ball.speed.x = -ball.speed.x
+        ball.speed.y += 300 * (Math.random() - .5)
+        console.log(ball.speed.y)
+        ball.speed.len *= 1.05
+    }else{
+      if (player.left < ball.right && player.right > ball.left &&
+              player.bottom < ball.bottom && player.bottom > ball.top) {
+          ball.speed.x = -ball.speed.x
+          ball.speed.y = -ball.speed.y
+                console.log(this.ball.speed.x);
       }
+    }
     //SI LA BARRA VA CON VELOCIDAD NEGATIVA Y EL TOP ESTA IGUAL QUE LA BOLA, CONSIDERAR
+  }
+  draw(){
+    this.drawBackground()
+    this.drawBall()
+    this.drawPlayers()
+    this.drawScore()
   }
   drawBackground() {
     this._context.beginPath()
-    this._context.fillStyle = 'pink'
+    this._context.fillStyle = '#09AB3F'
     this._context.fillRect(0, 0, this._canvas.width, this._canvas.height)
   }
   drawBall() {
     this._context.arc(this.ball.pos.x, this.ball.pos.y, this.ball.radio, 0, 2 * Math.PI)
-    this._context.fillStyle = 'yellow'
+    this._context.fillStyle = 'white'
     this._context.fill()
     this._context.stroke()
   }
@@ -139,33 +197,29 @@ class Pong {
   drawPlayers(){
     this.players.forEach(player => this.drawRect(player))
   }
+  drawScore(){
+    const align = this._canvas.width / 3
+    const CHAR_W = this.CHAR_PIXEL * 4    //Canvas with 1 space
+    this.players.forEach((player, index) => {
+      const chars = player.score.toString().split('')
+      const offset = align * (index + 1) - (CHAR_W * chars.length / 2) + this.CHAR_PIXEL / 2
+      chars.forEach((char, position) => {
+        let canvasScore = this.CHARS[char|0]
+        this._context.drawImage(canvasScore, offset + position * CHAR_W, 20)
+
+      })
+    })
+  }
 }
 
 const canvas = document.getElementById('pong')
 const pong = new Pong(canvas)
 
 canvas.addEventListener('mousemove', event => {
-  pong.players[0].pos.y = event.offsetY
+  const scale = event.offsetY / event.target.getBoundingClientRect().height
+  pong.players[0].pos.y = canvas.height * scale
 })
 
-/*function
-
-function
-
-function drawLeftBar() {
-  contex.fillStyle = 'white'
-  contex.fillRect(leftBar.pos.x, leftBar.pos.y, leftBar.size.x, leftBar.size.y)
-}
-
-function drawRightBar() {
-  contex.fillStyle = 'white'
-  contex.fillRect(rightBar.pos.x, rightBar.pos.y, rightBar.size.x, rightBar.size.y)
-}
-
-const leftBar = new Bar(10, 50)
-leftBar.pos.x = 10
-leftBar.pos.y = 10
-const rightBar = new Bar(10, 50)
-rightBar.pos.x = canvas.width - 20
-rightBar.pos.y = canvas.height - 60
-*/
+canvas.addEventListener('click', event => {
+  pong.start()
+})
